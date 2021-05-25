@@ -1,0 +1,60 @@
+"A date string with format `Y-m-d`, e.g. `2011-05-23`."
+scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
+
+"A datetime string with format `Y-m-d H:i:s`, e.g. `2018-05-23 13:43:32`."
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+
+"A datetime and timezone string in ISO 8601 format `Y-m-dTH:i:sO`, e.g. `2020-04-20T13:53:12+02:00`."
+scalar DateTimeTz @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTimeTz")
+
+scalar Upload @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Upload")
+
+type User {
+    id: ID!
+    email: String!
+    created_at: DateTime!
+    updated_at: DateTime!
+    shipments: [Shipment!]!
+}
+
+type Shipment {
+    id: ID!
+    waybill: String!
+    customer_address: String!
+    customer_name: String!
+    customer_phone: String!
+    created_at: DateTime!
+    updated_at: DateTime!
+    user: User! @belongsTo
+}
+
+type Query {
+    me: User @auth
+    users: [User!]! @all @guard
+    user(id: ID! @eq): User @find
+    shipments(user_id: Int! @where(operator: "like")): [Shipment!]! @paginate(defaultCount: 10)
+    shipment(id: Int! @eq): Shipment @find
+}
+
+type Mutation {
+    createUser(
+        email: String! @rules(apply: ["required", "unique:users"]),
+        password: String! @hash @rules(apply: ["required", "min:8"])
+    ): User! @create
+    createShipment(
+        waybill: Upload! @rules(apply: ["required", "mimes:jpeg,jpg,png"]),
+        customer_address: String! @rules(apply: ["required", "min:3"]),
+        customer_name: String! @rules(apply: ["required", "min:3"]),
+        customer_phone: String! @rules(apply: ["required", "min:8"]),
+        user_id: Int! @rules(apply: ["required", "exists:users,id"])
+    ): Shipment @guard
+    updateShipment(
+        id: ID!,
+        waybill: Upload @rules(apply: ["nullable", "mimes:jpeg,jpg,png"]),
+        customer_address: String! @rules(apply: ["required", "min:3"]),
+        customer_name: String! @rules(apply: ["required", "min:3"]),
+        customer_phone: String! @rules(apply: ["required", "min:8"]),
+    ): Shipment  @guard
+    deleteShipment(id: ID!): Shipment  @guard
+}
+
